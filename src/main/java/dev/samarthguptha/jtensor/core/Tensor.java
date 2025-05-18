@@ -1,7 +1,6 @@
 package dev.samarthguptha.jtensor.core;
 
 import java.util.Arrays;
-//ee
 public class Tensor {
     private final double[] data;
     private final int[] shape;
@@ -72,5 +71,86 @@ public class Tensor {
         double[] data = new double[totalSize];
         int[] strides = calculateStrides(shape);
         return new Tensor(data, Arrays.copyOf(shape, shape.length), strides, 0);
+    }
+
+    //fmtocreateTensorfrom1D
+
+    public static Tensor fromArray(double[] sourceArray) {
+        if (sourceArray == null) { throw new IllegalArgumentException("sourceArray is null"); }
+        double[] newData = Arrays.copyOf(sourceArray, sourceArray.length);
+        int[] newShape = {sourceArray.length};
+        int[] newStrides = calculateStrides(newShape);
+        return new Tensor(newData, newShape, newStrides, 0);
+    }
+    //fmtocreateTensorfrom2D
+    public static Tensor fromArray(double[][] sourceArray) {
+        if (sourceArray == null) { throw new IllegalArgumentException("sourceArray is null");
+        }
+        int rows = sourceArray.length;
+        int cols = sourceArray[0].length;
+
+        for (int i=1; i<rows; i++) {
+            if (sourceArray[i].length != cols) {
+                throw new IllegalArgumentException("All rows in 2D source array must have the same length.");
+            }
+        }
+        double[] newData = new double[rows*cols];
+        int k=0;
+        for (int i=0; i<rows; i++) {
+            for (int j=0; j<cols; j++) {
+                newData[k++] = sourceArray[i][j];
+            }
+        }
+        int[] newShape = {rows, cols};
+        int[] newStrides = calculateStrides(newShape);
+        return new Tensor(newData, newShape, newStrides, 0);
+    }
+    //generic fm to create tensor, N-Dimensional
+    public static Tensor fromArray(Object sourceObject) {
+        if (sourceObject == null) { throw new IllegalArgumentException("sourceObject is null");}
+        int[] shape = determineShape(sourceObject);
+        if (shape.length == 0) {
+            if (sourceObject instanceof Number) {
+                return new Tensor(new double[]{((Number) sourceObject).doubleValue()}, new int[0], new int[0], 0);
+            } else {
+                throw new IllegalArgumentException("Scalar object must be a Number type for automatic conversion.");
+            }
+        }
+        int totalSize = 1;
+        for (int dimSize : shape) {totalSize *= dimSize;}
+        double[] data = new double[totalSize];
+        flattenArray(sourceObject, data, 0, 0, shape);
+        int[] strides = calculateStrides(shape);
+        return new Tensor(data, shape, strides, 0);
+    }
+    private static int[] determineShape(Object arrayObject) {
+        if (arrayObject == null) {return new int[0];}
+        java.util.List<Integer> shapeList = new java.util.ArrayList<>();
+        Object current = arrayObject;
+        while (current.getClass().isArray()) {
+            int length = java.lang.reflect.Array.getLength(current);
+            shapeList.add(length);
+            if(length == 0) break;
+            current = java.lang.reflect.Array.get(current, 0);
+            if (current == null) break;
+        }
+        return shapeList.stream().mapToInt(i -> i).toArray();
+    }
+    private static int flattenArray(Object arrayObject, double[] flatData, int currentFlatIndex, int dim, int[] shape) {
+        if (dim==shape.length) {
+            if(arrayObject instanceof Number) {
+                flatData[currentFlatIndex] = ((Number) arrayObject).doubleValue();
+            }else if (arrayObject instanceof Double) {
+                flatData[currentFlatIndex++] = (Double) arrayObject;
+            }else {
+                throw new IllegalArgumentException("unsupported data type in source array: " + arrayObject.getClass().getName() + ". expected Double or Number.");
+            }
+            return currentFlatIndex;
+        }
+        int length = java.lang.reflect.Array.getLength(arrayObject);
+        for(int i = 0; i<length; i++) {
+            currentFlatIndex = flattenArray(java.lang.reflect.Array.get(arrayObject, i), flatData, currentFlatIndex, dim + 1, shape);
+        }
+        return currentFlatIndex;
     }
 }
