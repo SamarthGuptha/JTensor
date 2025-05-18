@@ -1,7 +1,7 @@
 package dev.samarthguptha.jtensor.core;
 
 import java.util.Arrays;
-
+//e
 public class Tensor {
     private final double[] data;
     private final int[] shape;
