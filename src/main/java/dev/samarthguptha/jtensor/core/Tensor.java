@@ -1,6 +1,10 @@
 package dev.samarthguptha.jtensor.core;
 
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+
 public class Tensor {
     private final double[] data;
     private final int[] shape;
@@ -125,13 +129,13 @@ public class Tensor {
     }
     private static int[] determineShape(Object arrayObject) {
         if (arrayObject == null) {return new int[0];}
-        java.util.List<Integer> shapeList = new java.util.ArrayList<>();
+        List<Integer> shapeList = new ArrayList<>();
         Object current = arrayObject;
         while (current.getClass().isArray()) {
-            int length = java.lang.reflect.Array.getLength(current);
+            int length = Array.getLength(current);
             shapeList.add(length);
             if(length == 0) break;
-            current = java.lang.reflect.Array.get(current, 0);
+            current = Array.get(current, 0);
             if (current == null) break;
         }
         return shapeList.stream().mapToInt(i -> i).toArray();
@@ -147,10 +151,36 @@ public class Tensor {
             }
             return currentFlatIndex;
         }
-        int length = java.lang.reflect.Array.getLength(arrayObject);
+        int length = Array.getLength(arrayObject);
         for(int i = 0; i<length; i++) {
-            currentFlatIndex = flattenArray(java.lang.reflect.Array.get(arrayObject, i), flatData, currentFlatIndex, dim + 1, shape);
+            currentFlatIndex = flattenArray(Array.get(arrayObject, i), flatData, currentFlatIndex, dim + 1, shape);
         }
         return currentFlatIndex;
     }
+    private int calculateFlatIndex(int... indices) {
+        if (indices == null) {throw new IllegalArgumentException("indices is null");}
+        if (indices.length != rank()) {
+            if(rank() == 0 && indices.length == 0) {return this.offset;}
+            throw new IllegalArgumentException("Number of indices(" +indices.length+") must match tensor rank("+rank()+")");
+        }
+        int flatIndex = this.offset;
+        for(int i =0; i<rank(); i++){
+            if(indices[i]<0||indices[i]>=this.shape[i]) { throw new IndexOutOfBoundsException("Index " + indices[i] + " is out of bounds for dimension " +i + " with size " + this.shape[i]);}
+            flatIndex += indices[i] * this.strides[i];
+        }
+        return flatIndex;
+    }
+
+    public double get(int... indices) {
+        if(rank() == 0) {
+            if(indices!=null && indices.length>0) {throw new IllegalArgumentException("Scalar Tensor doesn't accept indices for get(), Call get() with no arguments.");}
+            if(this.data.length == 0 && this.offset == 0) {
+                if(this.size() == 1 && this.data.length == 1) return this.data[this.offset];
+                throw new IllegalArgumentException("Scalar Tensor has no data, check creation.");
+            }
+        }
+        int yes = 3;
+        return yes;
+    }
+
 }
